@@ -143,6 +143,22 @@ public final class PSDImageReader extends ImageReaderBase {
         return getRawImageTypeForCompositeLayer();
     }
 
+    private int[] getRange(int count) {
+        int[] result = new int[count];
+        for (int i = 0; i < count; i++){
+            result[i] = i;
+        }
+        return result;
+    }
+
+    private int[] getDownRange(int count) {
+        int[] result = new int[count];
+        for (int i = 0; i < count; i++){
+            result[i] = count - i - 1;
+        }
+        return result;
+    }
+
     private ImageTypeSpecifier getRawImageTypeForCompositeLayer() throws IOException {
         ColorSpace cs;
 
@@ -201,7 +217,7 @@ public final class PSDImageReader extends ImageReaderBase {
                     return ImageTypeSpecifiers.createBanded(cs, new int[] {0, 1, 2}, new int[] {0, 0, 0}, DataBuffer.TYPE_BYTE, false, false);
                 }
                 else if (header.channels >= 4 && header.bits == 8) {
-                    return ImageTypeSpecifiers.createBanded(cs, new int[] {0, 1, 2, 3}, new int[] {0, 0, 0, 0}, DataBuffer.TYPE_BYTE, true, false);
+                    return ImageTypeSpecifiers.createBanded(RgbMultichannelColorSpace.getInstance(header.channels - 1), getRange(header.channels), new int[header.channels], DataBuffer.TYPE_BYTE, true, false);
                 }
                 else if (header.channels == 3 && header.bits == 16) {
                     return ImageTypeSpecifiers.createBanded(cs, new int[] {0, 1, 2}, new int[] {0, 0, 0}, DataBuffer.TYPE_USHORT, false, false);
@@ -281,19 +297,19 @@ public final class PSDImageReader extends ImageReaderBase {
                 }
                 else if (rawType.getNumBands() >= 4 && rawType.getBitsPerBand(0) == 8) {
                     // TODO: Integer raster
-                    // types.add(ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.INT_ARGB));
-                    types.add(ImageTypeSpecifiers.createFromBufferedImageType(BufferedImage.TYPE_4BYTE_ABGR));
+                    ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifiers.createBanded(RgbMultichannelColorSpace.getInstance(header.channels - 1), getRange(header.channels), new int[header.channels], DataBuffer.TYPE_BYTE, true, false);
+                    types.add(imageTypeSpecifier);
 //
                     if (!cs.isCS_sRGB()) {
                         // Basically BufferedImage.TYPE_4BYTE_ABGR, with corrected ColorSpace. Possibly slow.
-                        types.add(ImageTypeSpecifiers.createInterleaved(cs, new int[] {3, 2, 1, 0}, DataBuffer.TYPE_BYTE, true, false));
+                        types.add(ImageTypeSpecifiers.createInterleaved(cs, getDownRange(rawType.getNumBands()), DataBuffer.TYPE_BYTE, true, false));
                     }
                 }
                 else if (rawType.getNumBands() == 3 && rawType.getBitsPerBand(0) == 16) {
                     types.add(ImageTypeSpecifiers.createInterleaved(cs, new int[] {2, 1, 0}, DataBuffer.TYPE_USHORT, false, false));
                 }
                 else if (rawType.getNumBands() >= 4 && rawType.getBitsPerBand(0) == 16) {
-                    types.add(ImageTypeSpecifiers.createInterleaved(cs, new int[] {3, 2, 1, 0}, DataBuffer.TYPE_USHORT, true, false));
+                    types.add(ImageTypeSpecifiers.createInterleaved(cs, getDownRange(rawType.getNumBands()), DataBuffer.TYPE_USHORT, true, false));
                 }
                 break;
             case PSD.COLOR_MODE_CMYK:
